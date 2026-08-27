@@ -1,7 +1,7 @@
 'use client';
 
 import { useMemo, useState } from 'react';
-import { AlertTriangle, BarChart3, Boxes, Check, ChevronLeft, ChevronRight, CircleDollarSign, ClipboardCheck, FileSpreadsheet, FileText, Gauge, Layers3, PackageCheck, Settings2, ShoppingCart, Upload, Workflow, Wrench } from 'lucide-react';
+import { AlertTriangle, BarChart3, Boxes, Check, ChevronLeft, ChevronRight, CircleDollarSign, ClipboardCheck, FileSpreadsheet, FileText, Gauge, Layers3, LineChart, PackageCheck, Settings2, ShoppingCart, Upload, Workflow, Wrench } from 'lucide-react';
 import DashboardStep from '@/components/workflow/dashboard-step';
 import DemandStep from '@/components/workflow/demand-step';
 import SupplyStep from '@/components/workflow/supply-step';
@@ -59,7 +59,13 @@ export default function ProcurementApp() {
             </button>;
           })}
         </nav>
-        <div className="sidebar-foot"><b>2026년 09월 발주계획</b><br />로컬 프로토타입 · Phase 1<br />상세 계산·저장은 다음 단계에서 연결됩니다.</div>
+        <div className="sidebar-bottom">
+          <button className={`sidebar-menu ${active === 'dashboard' ? 'active' : ''}`} onClick={() => navigate(0)}>
+            <span className="sidebar-menu-icon"><LineChart size={15} /></span>
+            <span>분석</span>
+          </button>
+          <div className="sidebar-foot"><b>2026년 09월 발주계획</b><br />로컬 프로토타입 · Phase 1<br />상세 계산·저장은 다음 단계에서 연결됩니다.</div>
+        </div>
       </aside>
       <main className="main">
         <header className="topbar">
