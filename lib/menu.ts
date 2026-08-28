@@ -11,6 +11,7 @@ export const menuItems: MenuItem[] = [
   { label: 'SKU Demand Profile', href: '/analysis/demand-profile', icon: BarChart3, roles: ['USER', 'ADMIN'] },
   { label: 'Model Comparison', href: '/analysis/model-comparison', icon: BarChart3, roles: ['USER', 'ADMIN'] },
   { label: 'Inventory Projection', href: '/analysis/inventory-projection', icon: Boxes, roles: ['USER', 'ADMIN'] },
+  { label: 'Purchase Recommendation', href: '/recommendations/purchase', icon: Boxes, roles: ['USER', 'ADMIN'] },
   { label: '재고·공급', href: '/supply', icon: Boxes, roles: ['USER', 'ADMIN'] },
   { label: '관리자 설정', href: '/admin/settings', icon: Settings2, roles: ['ADMIN'] },
   { label: 'Forecast 설정', href: '/admin/forecast-settings', icon: Settings2, roles: ['ADMIN'] },

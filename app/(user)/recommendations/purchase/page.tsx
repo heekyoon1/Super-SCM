@@ -1,0 +1,16 @@
+import PageHeader from '@/components/shell/page-header';
+import Panel from '@/components/ui/panel';
+import Badge from '@/components/ui/badge';
+import EmptyValue from '@/components/ui/empty-value';
+import { requireUser } from '@/lib/auth';
+
+type Recommendation = { item_id: string; item_name: string | null; item_grade: string | null; risk_status: 'SAFE' | 'WARNING' | 'CRITICAL' | 'CALCULATION_UNAVAILABLE'; forecast_qty: number | null; confirmed_order_qty: number | null; available_inventory: number | null; safety_stock: number | null; stockout_date: string | null; required_qty: number | null; moq: number | null; pack_size: number | null; recommended_qty: number | null; recommended_order_date: string | null; calculation_status: string; calculation_reason: string | null; is_immediate_order: boolean | null; is_overdue: boolean | null };
+
+const value = (n: number | null, reason: string | null = null) => n == null ? <EmptyValue reasonCode={reason ?? 'CALCULATION_UNAVAILABLE'} /> : n.toLocaleString();
+
+export default async function PurchaseRecommendationPage() {
+  const { supabase } = await requireUser();
+  const { data } = await supabase.schema('analytics').from('purchase_recommendation').select('*').order('risk_status').order('item_id');
+  const rows = (data ?? []) as Recommendation[];
+  return <><PageHeader eyebrow="RECOMMENDATIONS / PURCHASE" title="Purchase Recommendation" description="Forecast, 재고, Lead Time, Safety Stock 및 운영 정책을 결합한 발주 추천입니다." /><Panel title="SKU별 발주 권고" description="추천수량과 계산불가 상태는 데이터베이스에 저장된 결과를 그대로 표시합니다."><div className="data-table-wrap"><table className="data-table"><thead><tr><th>SKU</th><th>품목명</th><th>Risk</th><th>Forecast</th><th>확정수주</th><th>재고</th><th>Safety Stock</th><th>Stockout</th><th>Required</th><th>MOQ</th><th>Pack</th><th>Recommended</th><th>권고일</th></tr></thead><tbody>{rows.map((row) => <tr key={row.item_id}><td><a href={`/recommendations/purchase/${encodeURIComponent(row.item_id)}`}>{row.item_id}</a></td><td>{row.item_name ?? <EmptyValue reasonCode="ITEM_NAME_UNAVAILABLE" />}</td><td><Badge status={row.risk_status}>{row.risk_status}</Badge></td><td className="numeric">{value(row.forecast_qty, row.calculation_reason)}</td><td className="numeric">{value(row.confirmed_order_qty, row.calculation_reason)}</td><td className="numeric">{value(row.available_inventory, row.calculation_reason)}</td><td className="numeric">{value(row.safety_stock, row.calculation_reason)}</td><td>{row.stockout_date ?? <EmptyValue reasonCode={row.calculation_reason ?? 'NO_STOCKOUT_DATE'} />}</td><td className="numeric">{value(row.required_qty, row.calculation_reason)}</td><td className="numeric">{value(row.moq, row.calculation_reason)}</td><td className="numeric">{value(row.pack_size, row.calculation_reason)}</td><td className="numeric">{value(row.recommended_qty, row.calculation_reason)}</td><td>{row.recommended_order_date ?? <EmptyValue reasonCode={row.calculation_reason ?? 'NO_RECOMMENDED_ORDER_DATE'} />}{row.is_immediate_order ? <span className="status-text status-text--critical"> · 즉시</span> : null}{row.is_overdue ? <span className="status-text status-text--warning"> · 지연</span> : null}</td></tr>)}{!rows.length && <tr><td colSpan={13}><EmptyValue reasonCode="NO_RECOMMENDATION_DATA" /></td></tr>}</tbody></table></div></Panel></>;
+}
