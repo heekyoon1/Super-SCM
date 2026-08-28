@@ -10,11 +10,13 @@ export const menuItems: MenuItem[] = [
   { label: '수요·발주', href: '/demand', icon: BarChart3, roles: ['USER', 'ADMIN'] },
   { label: 'SKU Demand Profile', href: '/analysis/demand-profile', icon: BarChart3, roles: ['USER', 'ADMIN'] },
   { label: 'Model Comparison', href: '/analysis/model-comparison', icon: BarChart3, roles: ['USER', 'ADMIN'] },
+  { label: 'Inventory Projection', href: '/analysis/inventory-projection', icon: Boxes, roles: ['USER', 'ADMIN'] },
   { label: '재고·공급', href: '/supply', icon: Boxes, roles: ['USER', 'ADMIN'] },
   { label: '관리자 설정', href: '/admin/settings', icon: Settings2, roles: ['ADMIN'] },
   { label: 'Forecast 설정', href: '/admin/forecast-settings', icon: Settings2, roles: ['ADMIN'] },
   { label: 'Forecast Models', href: '/admin/forecast-models', icon: Settings2, roles: ['ADMIN'] },
   { label: 'Forecast Runs', href: '/admin/forecast-runs', icon: BarChart3, roles: ['ADMIN'] },
+  { label: 'SCM Policies / Lead Time', href: '/admin/scm-policies/lead-time', icon: Timer, roles: ['ADMIN'] },
   { label: 'Data Management', href: '/admin/data-management', icon: Database, roles: ['ADMIN'] },
 ];
 
