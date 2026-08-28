@@ -12,6 +12,8 @@ export const menuItems: MenuItem[] = [
   { label: '재고·공급', href: '/supply', icon: Boxes, roles: ['USER', 'ADMIN'] },
   { label: '관리자 설정', href: '/admin/settings', icon: Settings2, roles: ['ADMIN'] },
   { label: 'Forecast 설정', href: '/admin/forecast-settings', icon: Settings2, roles: ['ADMIN'] },
+  { label: 'Forecast Models', href: '/admin/forecast-models', icon: Settings2, roles: ['ADMIN'] },
+  { label: 'Forecast Runs', href: '/admin/forecast-runs', icon: BarChart3, roles: ['ADMIN'] },
   { label: 'Data Management', href: '/admin/data-management', icon: Database, roles: ['ADMIN'] },
 ];
 
