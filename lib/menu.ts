@@ -9,6 +9,7 @@ export const menuItems: MenuItem[] = [
   { label: 'Stockout Risk', href: '/stockout-risk', icon: ShieldAlert, roles: ['USER', 'ADMIN'] },
   { label: '수요·발주', href: '/demand', icon: BarChart3, roles: ['USER', 'ADMIN'] },
   { label: 'SKU Demand Profile', href: '/analysis/demand-profile', icon: BarChart3, roles: ['USER', 'ADMIN'] },
+  { label: 'Model Comparison', href: '/analysis/model-comparison', icon: BarChart3, roles: ['USER', 'ADMIN'] },
   { label: '재고·공급', href: '/supply', icon: Boxes, roles: ['USER', 'ADMIN'] },
   { label: '관리자 설정', href: '/admin/settings', icon: Settings2, roles: ['ADMIN'] },
   { label: 'Forecast 설정', href: '/admin/forecast-settings', icon: Settings2, roles: ['ADMIN'] },
