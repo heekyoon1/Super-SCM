@@ -1,4 +1,6 @@
-import { createClient, type SupabaseClient } from '@supabase/supabase-js';
+import { createServerClient } from '@supabase/ssr';
+import { cookies } from 'next/headers';
+import type { SupabaseClient } from '@supabase/supabase-js';
 
 function getPublicSupabaseConfig() {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
@@ -10,7 +12,15 @@ function getPublicSupabaseConfig() {
   return { url, key };
 }
 
-export function createSupabaseServerClient(): SupabaseClient {
+export async function createSupabaseServerClient(): Promise<SupabaseClient> {
   const { url, key } = getPublicSupabaseConfig();
-  return createClient(url, key);
+  const cookieStore = await cookies();
+  return createServerClient(url, key, {
+    cookies: {
+      getAll() { return cookieStore.getAll(); },
+      setAll(cookiesToSet) {
+        try { cookiesToSet.forEach(({ name, value, options }) => cookieStore.set(name, value, options)); } catch { /* Server Components cannot always write cookies. */ }
+      },
+    },
+  });
 }

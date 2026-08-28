@@ -10,6 +10,7 @@ export const menuItems: MenuItem[] = [
   { label: '수요·발주', href: '/demand', icon: BarChart3, roles: ['USER', 'ADMIN'] },
   { label: '재고·공급', href: '/supply', icon: Boxes, roles: ['USER', 'ADMIN'] },
   { label: '관리자 설정', href: '/admin/settings', icon: Settings2, roles: ['ADMIN'] },
+  { label: 'Forecast 설정', href: '/admin/forecast-settings', icon: Settings2, roles: ['ADMIN'] },
 ];
 
 export const getMenuItems = (role: MenuRole = 'USER') => menuItems.filter((item) => item.roles.includes(role));
