@@ -1,0 +1,1 @@
+export default function EmptyValue({ reasonCode }: { reasonCode: string }) { return <span className="empty-value" aria-label={`계산 불가: ${reasonCode}`}><span>—</span><span className="empty-value-reason">{reasonCode}</span></span>; }
