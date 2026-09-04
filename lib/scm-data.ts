@@ -1,3 +1,5 @@
+// DEPRECATED 2026-09-04 하드코딩 목업. 신규 코드는 lib/scm.ts 사용
+
 export type LeadTimeRow = { id: string; supplier: string; lane: string; plannedDays: number | null; actualDays: number | null; status: 'SAFE' | 'WARNING' | 'CRITICAL' | 'CALCULATION_UNAVAILABLE'; reasonCode?: string };
 export const leadTimeRows: LeadTimeRow[] = [
   { id: 'lt-1', supplier: '상해 Supplier A', lane: '상해 → 부산', plannedDays: 18, actualDays: 19, status: 'SAFE' },
