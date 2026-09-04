@@ -1,31 +1,36 @@
-import { createSupabaseServerClient } from '@/lib/supabase/server';
-import { normalizeBomRequirement, normalizeDemandProfile, normalizeOlAccuracy, normalizeShipmentTrend, type BomRequirement, type DemandProfileRt, type OlAccuracy, type ScmSourceRow, type ShipmentTrend } from '@/lib/scm-model';
+import { normalizeBomRequirement, normalizeDemandProfile, normalizeOlAccuracy, normalizeShipmentTrend, nullableNumber, nullableString, type BomRequirement, type DemandProfileRt, type OlAccuracy, type ScmSourceRow, type ShipmentTrend } from '@/lib/scm-model';
 
-async function readView<T>(view: string, filter?: (query: any) => any): Promise<ScmSourceRow[]> {
+type Query = { eq: (column: string, value: unknown) => Query; in: (column: string, values: unknown[]) => Query };
+
+async function readRows(schema: string, view: string, filter?: (query: Query) => Query): Promise<ScmSourceRow[]> {
+  const { createSupabaseServerClient } = await import('@/lib/supabase/server');
   const supabase = await createSupabaseServerClient();
-  let query = supabase.schema('analytics').from(view).select('*');
+  let query = supabase.schema(schema).from(view).select('*') as unknown as Query;
   if (filter) query = filter(query);
-  const { data, error } = await query;
-  if (error) throw new Error(`analytics.${view} 조회 실패: ${error.message}`);
-  return (data ?? []) as ScmSourceRow[];
+  const result = await query as unknown as { data: unknown[] | null; error: { message: string } | null };
+  if (result.error) throw new Error(`${schema}.${view} 조회 실패: ${result.error.message}`);
+  return (result.data ?? []) as ScmSourceRow[];
 }
 
-export async function getShipmentTrend(itemCode?: string): Promise<ShipmentTrend[]> {
-  const rows = await readView('v_shipment_trend', itemCode ? (query) => query.eq('item_code', itemCode) : undefined);
-  return rows.map(normalizeShipmentTrend);
+const sourceKey = (row: ScmSourceRow, ...names: string[]) => names.map((name) => row[name]).find((value) => value !== undefined) ?? null;
+const monthKey = (value: unknown) => { const text = nullableString(value); return text ? text.slice(0, 7) : null; };
+const monthRange = (start: string, end: string) => { const result: string[] = []; const cursor = new Date(`${start}-01T00:00:00Z`); const last = new Date(`${end}-01T00:00:00Z`); while (cursor <= last) { result.push(cursor.toISOString().slice(0, 7)); cursor.setUTCMonth(cursor.getUTCMonth() + 1); } return result; };
+
+export async function getShipmentTrend(itemCode?: string): Promise<ShipmentTrend[]> { const rows = await readRows('analytics', 'v_shipment_by_hoc', itemCode ? (query) => query.eq('item_code', itemCode) : undefined); return rows.map(normalizeShipmentTrend); }
+
+function calculateDemandProfile(itemCode: string | null, rows: ScmSourceRow[]): DemandProfileRt {
+  const quantities = new Map<string, number>(); let itemName: string | null = null;
+  for (const row of rows) { itemName ??= nullableString(sourceKey(row, 'item_name', 'name')); const period = monthKey(sourceKey(row, 'period', 'shipment_month', 'shipment_date', 'date')); const quantity = nullableNumber(sourceKey(row, 'quantity', 'shipment_qty', 'qty')); if (period && quantity !== null) quantities.set(period, (quantities.get(period) ?? 0) + quantity); }
+  const periods = Array.from(quantities.keys()).sort(); const densePeriods = periods.length ? monthRange(periods[0], periods[periods.length - 1]) : []; const grid = densePeriods.map((period) => quantities.get(period) ?? 0); const nonzero = grid.filter((quantity) => quantity > 0); const nPeriods = grid.length || null; const nNonzeroPeriods = nonzero.length || null; const mean = nonzero.length ? nonzero.reduce((sum, quantity) => sum + quantity, 0) / nonzero.length : null; const cv = mean !== null && nonzero.length >= 2 ? Math.sqrt(nonzero.reduce((sum, quantity) => sum + (quantity - mean) ** 2, 0) / (nonzero.length - 1)) / mean : null; const cvSquared = cv === null ? null : cv ** 2; const adi = nPeriods !== null && nNonzeroPeriods !== null ? nPeriods / nNonzeroPeriods : null;
+  const reasonCode = nPeriods === null ? 'NO_HISTORY' : nPeriods < 6 ? 'INSUFFICIENT_HISTORY' : nonzero.length === 0 ? 'NO_NONZERO_DEMAND' : cvSquared === null || adi === null ? 'INSUFFICIENT_HISTORY' : null; const demandType = reasonCode === null ? adi! < 1.32 && cvSquared! < 0.49 ? 'SMOOTH' : adi! >= 1.32 && cvSquared! < 0.49 ? 'INTERMITTENT' : adi! < 1.32 && cvSquared! >= 0.49 ? 'ERRATIC' : 'LUMPY' : null;
+  const trend = grid.length >= 2 ? grid.reduce((sum, quantity, index) => { const x = index + 1; const xMean = (grid.length + 1) / 2; const yMean = grid.reduce((a, b) => a + b, 0) / grid.length; return sum + (x - xMean) * (quantity - yMean); }, 0) / grid.reduce((sum, _, index) => sum + ((index + 1) - (grid.length + 1) / 2) ** 2, 0) : null; const recentChangeRate = grid.length >= 6 ? (() => { const recent = grid.slice(-3).reduce((a, b) => a + b, 0); const prior = grid.slice(-6, -3).reduce((a, b) => a + b, 0); return prior === 0 ? null : (recent - prior) / prior; })() : null; const peakIndex = grid.length ? grid.reduce((best, quantity, index) => quantity > best.quantity ? { quantity, index } : best, { quantity: -Infinity, index: 0 }).index : null;
+  return { itemCode, itemName, nPeriods, nNonzeroPeriods, adi, cv, cvSquared, zeroDemandRate: nPeriods === null ? null : (grid.length - nonzero.length) / grid.length, trend, recentChangeRate, peakPeriod: peakIndex === null ? null : densePeriods[peakIndex], demandType, seasonality: null, reasonCode, stability: cvSquared === null ? null : cvSquared < 0.49 ? 'STABLE' : 'VOLATILE' };
 }
 
-export async function getDemandProfileRt(itemCode?: string): Promise<DemandProfileRt[]> {
-  const rows = await readView('v_item_demand_profile', itemCode ? (query) => query.eq('item_code', itemCode) : undefined);
-  return rows.map(normalizeDemandProfile);
-}
+export async function getDemandProfile(itemCode?: string): Promise<DemandProfileRt[]> { const rows = await readRows('fact', 'fact_shipment', itemCode ? (query) => query.eq('item_code', itemCode) : undefined); const grouped = new Map<string, ScmSourceRow[]>(); for (const row of rows) { const code = nullableString(sourceKey(row, 'item_code', 'item_id')); if (code) grouped.set(code, [...(grouped.get(code) ?? []), row]); } if (itemCode && !grouped.has(itemCode)) return [calculateDemandProfile(itemCode, [])]; return Array.from(grouped.entries()).map(([code, values]) => calculateDemandProfile(code, values)); }
+export const getDemandProfileRt = getDemandProfile;
 
-export async function getOlAccuracy(modelBase?: string): Promise<OlAccuracy[]> {
-  const rows = await readView('v_ol_accuracy', modelBase ? (query) => query.eq('model_base', modelBase) : undefined);
-  return rows.map(normalizeOlAccuracy);
-}
+function score(actual: number[], forecast: number[]) { const denominator = actual.reduce((sum, value) => sum + value, 0); if (denominator === 0) return { value: null, reason: 'ZERO_ACTUAL_DENOMINATOR' }; return { value: { wape: actual.reduce((sum, value, index) => sum + Math.abs(forecast[index] - value), 0) / denominator, bias: forecast.reduce((sum, value, index) => sum + value - actual[index], 0) / denominator }, reason: null }; }
+export async function getOlAccuracy(modelBase?: string, fy?: string | number): Promise<OlAccuracy[]> { const rows = await readRows('fact', 'fact_mc_plan_actual', (query) => { const byModel = modelBase ? query.eq('model_base', modelBase) : query; return fy === undefined ? byModel : byModel.eq('fy', fy); }); const grouped = new Map<string, ScmSourceRow[]>(); for (const row of rows) { const base = nullableString(sourceKey(row, 'model_base', 'model')); if (base) grouped.set(base, [...(grouped.get(base) ?? []), row]); } return Array.from(grouped.entries()).map(([base, values]) => { const salesActual: number[] = []; const salesForecast: number[] = []; const scmActual: number[] = []; const scmForecast: number[] = []; for (const row of values) { const act = nullableNumber(sourceKey(row, 'act', 'actual')); if (act === null) continue; const sales = nullableNumber(sourceKey(row, 'sales_ol', 'ol_sales', 'sales')); const scm = nullableNumber(sourceKey(row, 'scm_ol', 'ol_scm', 'scm')); if (sales !== null) { salesActual.push(act); salesForecast.push(sales); } if (scm !== null) { scmActual.push(act); scmForecast.push(scm); } } const salesScore = score(salesActual, salesForecast); const scmScore = score(scmActual, scmForecast); return normalizeOlAccuracy({ model_base: base, fy: fy ?? sourceKey(values[0] ?? {}, 'fy'), n_periods: values.length, sales_wape: salesScore.value?.wape ?? null, sales_bias: salesScore.value?.bias ?? null, scm_wape: scmScore.value?.wape ?? null, scm_bias: scmScore.value?.bias ?? null, reason_code: salesScore.reason ?? scmScore.reason }); }); }
 
-export async function getBomRequirement(modelBase: string): Promise<BomRequirement[]> {
-  const rows = await readView('v_bom_requirement_x', (query) => query.eq('model_base', modelBase));
-  return rows.map(normalizeBomRequirement);
-}
+export async function getBomRequirement(modelBase: string): Promise<BomRequirement[]> { const mcCaps = await readRows('bridge', 'bridge_mc_cap', (query) => query.eq('model_base', modelBase)); const capCodes = mcCaps.map((row) => nullableString(sourceKey(row, 'cap_item_code', 'cap_code', 'item_code'))).filter((value): value is string => value !== null); if (!capCodes.length) return [normalizeBomRequirement({ model_base: modelBase, reason_code: 'NO_CAP_MAPPING' })]; const capOptions = await readRows('bridge', 'bridge_cap_option', (query) => query.in('cap_item_code', capCodes)); const optionCodes = capOptions.map((row) => nullableString(sourceKey(row, 'option_item_code', 'option_code', 'item_code'))).filter((value): value is string => value !== null); const bom = await readRows('bridge', 'bridge_bom', (query) => query.in('parent_item_code', [...capCodes, ...optionCodes])); const optionModel = optionCodes.length ? await readRows('bridge', 'bridge_option_model', (query) => query.in('item_code', optionCodes).eq('model_base', modelBase)) : []; const common = new Map(optionModel.map((row) => [nullableString(sourceKey(row, 'item_code', 'option_item_code')), nullableString(sourceKey(row, 'common'))?.toUpperCase() === 'COMMON'])); return bom.map((row) => normalizeBomRequirement({ ...row, model_base: modelBase, cap_item_code: sourceKey(row, 'cap_item_code', 'parent_item_code'), option_item_code: sourceKey(row, 'option_item_code', 'parent_item_code'), common: common.get(nullableString(sourceKey(row, 'option_item_code', 'parent_item_code'))) ?? null })); }

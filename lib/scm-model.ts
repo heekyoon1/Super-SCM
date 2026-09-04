@@ -6,7 +6,10 @@ export type ShipmentTrend = {
   shipmentQty: number | null;
   nMonths: number | null;
   avg3m: number | null;
+  avg6m: number | null;
   avg12m: number | null;
+  recentMonth: string | null;
+  recentQty: number | null;
   reasonCode: ReasonCode;
 };
 
@@ -40,6 +43,11 @@ export type OlAccuracy = {
   rmse: number | null;
   mae: number | null;
   reasonCode: ReasonCode;
+  fy: string | number | null;
+  salesWape: number | null;
+  salesBias: number | null;
+  scmWape: number | null;
+  scmBias: number | null;
 };
 
 export type BomRequirement = {
@@ -49,6 +57,10 @@ export type BomRequirement = {
   requirementQty: number | null;
   period: string | null;
   reasonCode: ReasonCode;
+  capItemCode: string | null;
+  optionItemCode: string | null;
+  sccLabel: string | null;
+  common: boolean | null;
 };
 
 export type ScmSourceRow = Record<string, unknown> & { reason_code?: unknown; reasonCode?: unknown };
@@ -66,7 +78,7 @@ export const nullableString = (value: unknown): string | null => value === null 
 export const reasonCode = (row: ScmSourceRow) => nullableString(key(row, 'reason_code', 'reasonCode'));
 
 export function normalizeShipmentTrend(row: ScmSourceRow): ShipmentTrend {
-  return { itemCode: nullableString(key(row, 'item_code', 'item_id', 'item_code_id')), period: nullableString(key(row, 'period', 'month', 'shipment_month')), shipmentQty: nullableNumber(key(row, 'shipment_qty', 'quantity', 'qty')), nMonths: nullableNumber(key(row, 'n_months', 'months')), avg3m: nullableNumber(key(row, 'avg_3m')), avg12m: nullableNumber(key(row, 'avg_12m')), reasonCode: reasonCode(row) };
+  return { itemCode: nullableString(key(row, 'item_code', 'item_id', 'item_code_id')), period: nullableString(key(row, 'period', 'month', 'shipment_month')), shipmentQty: nullableNumber(key(row, 'shipment_qty', 'quantity', 'qty')), nMonths: nullableNumber(key(row, 'n_months', 'months')), avg3m: nullableNumber(key(row, 'avg_3m')), avg6m: nullableNumber(key(row, 'avg_6m')), avg12m: nullableNumber(key(row, 'avg_12m')), recentMonth: nullableString(key(row, 'recent_month', 'latest_month')), recentQty: nullableNumber(key(row, 'recent_qty', 'latest_qty')), reasonCode: reasonCode(row) };
 }
 
 export function normalizeDemandProfile(row: ScmSourceRow): DemandProfileRt {
@@ -74,9 +86,9 @@ export function normalizeDemandProfile(row: ScmSourceRow): DemandProfileRt {
 }
 
 export function normalizeOlAccuracy(row: ScmSourceRow): OlAccuracy {
-  return { modelBase: nullableString(key(row, 'model_base', 'model_id', 'model')), period: nullableString(key(row, 'period', 'month')), nPeriods: nullableNumber(key(row, 'n_periods')), actualQty: nullableNumber(key(row, 'actual_qty', 'actual')), forecastQty: nullableNumber(key(row, 'forecast_qty', 'forecast')), wape: nullableNumber(key(row, 'wape')), mape: nullableNumber(key(row, 'mape')), bias: nullableNumber(key(row, 'bias')), rmse: nullableNumber(key(row, 'rmse')), mae: nullableNumber(key(row, 'mae')), reasonCode: reasonCode(row) };
+  return { modelBase: nullableString(key(row, 'model_base', 'model_id', 'model')), period: nullableString(key(row, 'period', 'month')), nPeriods: nullableNumber(key(row, 'n_periods')), actualQty: nullableNumber(key(row, 'actual_qty', 'actual')), forecastQty: nullableNumber(key(row, 'forecast_qty', 'forecast')), wape: nullableNumber(key(row, 'wape')), mape: nullableNumber(key(row, 'mape')), bias: nullableNumber(key(row, 'bias')), rmse: nullableNumber(key(row, 'rmse')), mae: nullableNumber(key(row, 'mae')), reasonCode: reasonCode(row), fy: key(row, 'fy', 'fiscal_year') as string | number | null, salesWape: nullableNumber(key(row, 'sales_wape')), salesBias: nullableNumber(key(row, 'sales_bias')), scmWape: nullableNumber(key(row, 'scm_wape')), scmBias: nullableNumber(key(row, 'scm_bias')) };
 }
 
 export function normalizeBomRequirement(row: ScmSourceRow): BomRequirement {
-  return { modelBase: nullableString(key(row, 'model_base', 'model_id', 'model')), parentItemCode: nullableString(key(row, 'parent_item_code', 'parent_item_id', 'parent_sku')), componentItemCode: nullableString(key(row, 'component_item_code', 'component_item_id', 'component_sku')), requirementQty: nullableNumber(key(row, 'requirement_qty', 'required_qty', 'qty')), period: nullableString(key(row, 'period', 'month')), reasonCode: reasonCode(row) };
+  return { modelBase: nullableString(key(row, 'model_base', 'model_id', 'model')), parentItemCode: nullableString(key(row, 'parent_item_code', 'parent_item_id', 'parent_sku')), componentItemCode: nullableString(key(row, 'component_item_code', 'component_item_id', 'component_sku')), requirementQty: nullableNumber(key(row, 'requirement_qty', 'required_qty', 'qty')), period: nullableString(key(row, 'period', 'month')), reasonCode: reasonCode(row), capItemCode: nullableString(key(row, 'cap_item_code', 'cap_code')), optionItemCode: nullableString(key(row, 'option_item_code', 'option_code')), sccLabel: nullableString(key(row, 'scc_label', 'scc', 'label')), common: typeof key(row, 'common') === 'boolean' ? key(row, 'common') as boolean : nullableString(key(row, 'common'))?.toUpperCase() === 'COMMON' ? true : null };
 }
