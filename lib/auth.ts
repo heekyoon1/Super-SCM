@@ -22,7 +22,8 @@ export async function getRole(): Promise<AppRole | null> {
   const supabase = await createSupabaseServerClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return null;
-  const { data } = await supabase.schema('core').from('app_user').select('role, active').eq('user_id', user.id).maybeSingle();
+  const { data: rawProfile } = await supabase.rpc('current_app_user').maybeSingle();
+  const data = rawProfile as Pick<AppProfile, 'role' | 'active'> | null;
   if (!data?.active) return null;
   return data.role as AppRole;
 }
@@ -31,7 +32,8 @@ async function readAuthenticatedSession(): Promise<AuthenticatedSession | null> 
   const supabase = await createSupabaseServerClient();
   const { data: { user }, error: userError } = await supabase.auth.getUser();
   if (userError || !user) return null;
-  const { data: profile, error: profileError } = await supabase.schema('core').from('app_user').select('user_id, email, name, department, role, active, last_login_at').eq('user_id', user.id).maybeSingle();
+  const { data: rawProfile, error: profileError } = await supabase.rpc('current_app_user').maybeSingle();
+  const profile = rawProfile as AppProfile | null;
   if (profileError || !profile?.active) return null;
   return { user, profile: profile as AppProfile, supabase };
 }

@@ -25,11 +25,16 @@ export async function loginAction(_: LoginState, formData: FormData): Promise<Lo
 
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return { error: '로그인 세션을 확인할 수 없습니다.' };
-  const { data: profile } = await supabase.schema('core').from('app_user').select('active').eq('user_id', user.id).maybeSingle();
+  const { data: rawProfile, error: profileError } = await supabase.rpc('current_app_user').maybeSingle();
+  const profile = rawProfile as { active: boolean } | null;
+  if (profileError) {
+    await supabase.auth.signOut();
+    return { error: `계정 상태를 확인할 수 없습니다: ${profileError.message}` };
+  }
   if (!profile?.active) {
     await supabase.auth.signOut();
     return { error: '비활성화되었거나 등록되지 않은 계정입니다.' };
   }
-  await supabase.schema('core').rpc('mark_login');
+  await supabase.rpc('mark_current_login');
   redirect(nextPath);
 }
