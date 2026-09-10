@@ -4,7 +4,8 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
-    "test": "tsc --noEmit",
+    "test": "tsx --test lib/contracts.test.ts lib/auth-policy.test.ts",
+    "typecheck": "tsc --noEmit",
     "build": "next build",
     "start": "next start"
   },
@@ -23,5 +24,8 @@
     "recharts": "^3.10.1",
     "typescript": "^5.0.0",
     "xlsx": "^0.18.5"
+  },
+  "devDependencies": {
+    "tsx": "^4.20.6"
   }
 }

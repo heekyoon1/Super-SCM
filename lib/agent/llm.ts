@@ -3,13 +3,14 @@ export type ChatMessage = { role: ChatRole; content: string | null; name?: strin
 export type LlmToolCall = { id: string; type: 'function'; function: { name: string; arguments: Record<string, unknown> } };
 export type LlmToolDefinition = { type: 'function'; function: { name: string; description?: string; parameters: Record<string, unknown> } };
 export type ResponseFormat = { type: 'json_schema'; json_schema: { name: string; description?: string; strict: true; schema: Record<string, unknown> } } | { type: 'json_object' };
-export type ChatRequest = { messages: ChatMessage[]; tools?: LlmToolDefinition[]; tool_choice?: 'auto'; temperature?: number; response_format?: ResponseFormat };
+export type ChatRequest = { messages: ChatMessage[]; tools?: LlmToolDefinition[]; tool_choice?: 'auto'; temperature?: number; response_format?: ResponseFormat; timeoutMs?: number };
 export type ChatSuccess = { message: ChatMessage; toolCalls: LlmToolCall[]; usage: Record<string, unknown> | null };
 export type ChatError = { error: string };
 export type ChatResult = ChatSuccess | ChatError;
 export type FetchLike = (input: RequestInfo | URL, init?: RequestInit) => Promise<Response>;
 
-const fallbackAttempted = new Set<string>();
+const jsonSchemaFallbackAttempted = new Set<string>();
+const temperatureFallbackAttempted = new Set<string>();
 
 const setting = (name: string) => (process.env[name] ?? '').trim();
 const errorResult = (error: string): ChatError => ({ error });
@@ -65,10 +66,10 @@ export async function callChatCompletions(request: ChatRequest, fetchImpl: Fetch
   if (!baseUrl || !apiKey || !model) return errorResult('MISSING_OPENAI_CONFIGURATION');
   const endpoint = `${baseUrl.replace(/\/$/, '')}/chat/completions`;
   const key = `${baseUrl}|${model}`;
-  const initial: Record<string, unknown> = { model, messages: request.messages, tools: request.tools, tool_choice: request.tool_choice ?? (request.tools ? 'auto' : undefined), temperature: request.temperature ?? 0, response_format: fallbackAttempted.has(key) && request.response_format?.type === 'json_schema' ? { type: 'json_object' } : request.response_format };
+  const initial: Record<string, unknown> = { model, messages: request.messages, tools: request.tools, tool_choice: request.tool_choice ?? (request.tools ? 'auto' : undefined), temperature: temperatureFallbackAttempted.has(key) ? undefined : request.temperature ?? 0, response_format: jsonSchemaFallbackAttempted.has(key) && request.response_format?.type === 'json_schema' ? { type: 'json_object' } : request.response_format };
   const send = async (payload: Record<string, unknown>): Promise<{ result: ChatResult; status: number; body: string }> => {
     const controller = new AbortController();
-    const timer = setTimeout(() => controller.abort(), 60000);
+    const timer = setTimeout(() => controller.abort(), request.timeoutMs ?? 60000);
     try {
       const response = await fetchImpl(endpoint, { method: 'POST', headers: { 'content-type': 'application/json', authorization: `Bearer ${apiKey}` }, body: JSON.stringify(payload), signal: controller.signal });
       const body = await response.text();
@@ -78,10 +79,12 @@ export async function callChatCompletions(request: ChatRequest, fetchImpl: Fetch
     finally { clearTimeout(timer); }
   };
   const first = await send(initial);
-  if (first.status === 400 && !fallbackAttempted.has(key)) {
+  if (first.status === 400) {
     const kind = fallbackKind(first.body, request.response_format);
-    if (kind) {
-      fallbackAttempted.add(key);
+    const canRetry = kind === 'json_schema' ? !jsonSchemaFallbackAttempted.has(key) : kind === 'temperature' ? !temperatureFallbackAttempted.has(key) : false;
+    if (kind && canRetry) {
+      if (kind === 'json_schema') jsonSchemaFallbackAttempted.add(key);
+      else temperatureFallbackAttempted.add(key);
       const retry = { ...initial };
       if (kind === 'json_schema') retry.response_format = { type: 'json_object' };
       else delete retry.temperature;
@@ -91,4 +94,4 @@ export async function callChatCompletions(request: ChatRequest, fetchImpl: Fetch
   return first.result;
 }
 
-export const __resetLlmFallbackCacheForTests = () => fallbackAttempted.clear();
+export const __resetLlmFallbackCacheForTests = () => { jsonSchemaFallbackAttempted.clear(); temperatureFallbackAttempted.clear(); };

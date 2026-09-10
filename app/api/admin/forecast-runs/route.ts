@@ -1,11 +1,12 @@
 import { NextResponse } from 'next/server';
-import { requireAdmin } from '@/lib/auth';
+import { requireAdminApi } from '@/lib/auth';
+import { apiErrorResponse } from '@/lib/api-auth';
 
 export async function POST() {
   try {
-    const { supabase } = await requireAdmin();
+    const { supabase } = await requireAdminApi();
     const { data, error } = await supabase.schema('core').rpc('run_baseline_forecast');
     if (error) throw new Error(error.message);
     return NextResponse.json({ runId: data });
-  } catch (error) { return NextResponse.json({ error: error instanceof Error ? error.message : 'FORECAST_RUN_FAILED' }, { status: 403 }); }
+  } catch (error) { return apiErrorResponse(error, 'FORECAST_RUN_FAILED'); }
 }

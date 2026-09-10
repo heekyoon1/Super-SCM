@@ -1,0 +1,5 @@
+project_id = "super-scm"
+
+[api]
+enabled = true
+schemas = ["public", "core", "analytics", "raw", "fact", "bridge"]

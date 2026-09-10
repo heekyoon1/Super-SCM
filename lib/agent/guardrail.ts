@@ -14,7 +14,7 @@ function excluded(text: string, start: number, end: number): boolean {
   if (before.toUpperCase() === 'P') return true;
   const dates = new RegExp(datePattern.source, 'g'); let dateMatch: RegExpExecArray | null;
   while ((dateMatch = dates.exec(text)) !== null) { const dateStart = dateMatch.index; if (start < dateStart + dateMatch[0].length && end > dateStart) return true; }
-  const lineStart = text.lastIndexOf('\n', start - 1) + 1; const prefix = text.slice(lineStart, start); if (/^\s*\d+$/.test(prefix) && /^[.)]/.test(after)) return true;
+  const lineStart = text.lastIndexOf('\n', start - 1) + 1; const prefix = text.slice(lineStart, start); if (/(?:^|[,\n])\s*$/.test(prefix) && /^[.)]/.test(after)) return true;
   return false;
 }
 

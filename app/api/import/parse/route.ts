@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
-import { requireUser } from '@/lib/auth';
+import { requireAdminApi } from '@/lib/auth';
+import { apiErrorResponse } from '@/lib/api-auth';
 import { parseImportFile } from '@/lib/import/parse';
 import { applyMapping, inferMapping } from '@/lib/import/schema';
 import { createUploadBatch, getItemIds } from '@/lib/import/repository';
@@ -10,7 +11,7 @@ export const runtime = 'nodejs';
 
 export async function POST(request: Request) {
   try {
-    const { user } = await requireUser();
+    const { user } = await requireAdminApi();
     const form = await request.formData();
     const file = form.get('file');
     const importType = String(form.get('importType') ?? '') as ImportType;
@@ -25,5 +26,5 @@ export async function POST(request: Request) {
     const result = validateRows(importType, mappedRows, { itemIds: itemPolicy.ids, itemPolicyConfigured: itemPolicy.configured });
     const batchId = await createUploadBatch({ fileName: file.name, importType, importMode, uploadedBy: user.id, totalRows: parsed.rows.length, mapping, originalRows: parsed.rows, mappedRows, statuses: result.statuses, issues: result.issues });
     return NextResponse.json({ batchId, headers: parsed.headers, mapping, preview: parsed.rows.slice(0, 20), statuses: result.statuses.slice(0, 20), status: result.status, issueCount: result.issues.length, errorCount: result.statuses.filter((s) => s === 'ERROR').length, warningCount: result.statuses.filter((s) => s === 'WARNING').length });
-  } catch (error) { return NextResponse.json({ error: error instanceof Error ? error.message : 'IMPORT_PARSE_FAILED' }, { status: 400 }); }
+  } catch (error) { return apiErrorResponse(error, 'IMPORT_PARSE_FAILED'); }
 }

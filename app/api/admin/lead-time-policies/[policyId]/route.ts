@@ -1,9 +1,10 @@
 import { NextResponse } from 'next/server';
-import { requireAdmin } from '@/lib/auth';
+import { requireAdminApi } from '@/lib/auth';
+import { apiErrorResponse } from '@/lib/api-auth';
 
 export async function PATCH(request: Request, { params }: { params: Promise<{ policyId: string }> }) {
   try {
-    const { supabase, user } = await requireAdmin();
+    const { supabase, user } = await requireAdminApi();
     const policyId = (await params).policyId;
     const body = await request.json() as { confirmedLeadTimeDays?: number | null; effectiveFrom?: string; effectiveTo?: string | null; active?: boolean };
     if (body.confirmedLeadTimeDays != null && (!Number.isFinite(body.confirmedLeadTimeDays) || body.confirmedLeadTimeDays < 0)) return NextResponse.json({ error: 'INVALID_LEAD_TIME' }, { status: 400 });
@@ -13,5 +14,5 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ po
     if (error) throw new Error(error.message);
     await supabase.schema('core').from('audit_log').insert({ actor: user.id, action: 'LEAD_TIME_POLICY_UPDATED', target_type: 'lead_time_policy', target_id: policyId, before, after });
     return NextResponse.json({ policy: after });
-  } catch (error) { return NextResponse.json({ error: error instanceof Error ? error.message : 'LEAD_TIME_POLICY_UPDATE_FAILED' }, { status: 403 }); }
+  } catch (error) { return apiErrorResponse(error, 'LEAD_TIME_POLICY_UPDATE_FAILED'); }
 }

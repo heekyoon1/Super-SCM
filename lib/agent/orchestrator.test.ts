@@ -20,7 +20,7 @@ export async function orchestratorContractTests() {
   const roleTampering = await runAgent({ question: '질문', user: { role: 'USER' }, history: [] }, { fetchImpl: async () => response({ role: 'assistant', content: null, tool_calls: [{ id: 'admin-call', type: 'function', function: { name: 'adminOnly', arguments: '{"itemCode":"A"}' } }] }), tools: [adminOnly] });
   assert.equal(roleTampering.answer.cannot_answer_reason, 'TOOL_NOT_ALLOWED'); assert.equal(adminToolRuns, 0);
   const malformed = await runAgent({ question: '질문', user: { role: 'USER' }, history: [] }, { fetchImpl: async () => response({ role: 'assistant', content: null, tool_calls: [{ id: 'bad', type: 'function', function: { name: 'allowed', arguments: '{broken' } }] }), tools: [tool()] });
-  assert.equal(malformed.answer.cannot_answer_reason, 'INVALID_TOOL_ARGUMENTS');
+  assert.equal(malformed.answer.cannot_answer_reason, 'INVALID_TOOL_CALL_ARGUMENTS');
   let loopCalls = 0; const loop = await runAgent({ question: '질문', user: { role: 'USER' }, history: [] }, { fetchImpl: async () => { loopCalls += 1; return response({ role: 'assistant', content: null, tool_calls: [{ id: `loop-${loopCalls}`, type: 'function', function: { name: 'allowed', arguments: '{"itemCode":"A"}' } }] }); }, tools: [tool()] });
   assert.equal(loop.answer.cannot_answer_reason, 'MAX_TOOL_LOOPS'); assert.equal(loopCalls, 6);
   const typed: AgentRunResult = completed; assert.ok(typed.history.length >= 3);

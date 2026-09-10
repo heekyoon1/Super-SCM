@@ -1,9 +1,9 @@
-import { BarChart3, Boxes, Database, Gauge, MessageCircle, Settings2, ShieldAlert, Timer, type LucideIcon } from 'lucide-react';
+import { BarChart3, Boxes, Database, Gauge, MessageCircle, Settings2, ShieldAlert, Timer, Users, type LucideIcon } from 'lucide-react';
 
 export type MenuRole = 'USER' | 'ADMIN';
 export type MenuItem = { label: string; href: string; icon: LucideIcon; roles: MenuRole[] };
 
-export const menuItems: MenuItem[] = [
+export const USER_MENU: MenuItem[] = [
   { label: '대시보드', href: '/dashboard', icon: Gauge, roles: ['USER', 'ADMIN'] },
   { label: 'SCM Agent', href: '/agent', icon: MessageCircle, roles: ['USER', 'ADMIN'] },
   { label: 'Lead Time 분석', href: '/lead-time', icon: Timer, roles: ['USER', 'ADMIN'] },
@@ -14,6 +14,10 @@ export const menuItems: MenuItem[] = [
   { label: 'Inventory Projection', href: '/analysis/inventory-projection', icon: Boxes, roles: ['USER', 'ADMIN'] },
   { label: 'Purchase Recommendation', href: '/recommendations/purchase', icon: Boxes, roles: ['USER', 'ADMIN'] },
   { label: '재고·공급', href: '/supply', icon: Boxes, roles: ['USER', 'ADMIN'] },
+];
+
+export const ADMIN_MENU: MenuItem[] = [
+  { label: '사용자 관리', href: '/admin/users', icon: Users, roles: ['ADMIN'] },
   { label: '관리자 설정', href: '/admin/settings', icon: Settings2, roles: ['ADMIN'] },
   { label: 'Forecast 설정', href: '/admin/forecast-settings', icon: Settings2, roles: ['ADMIN'] },
   { label: 'Forecast Models', href: '/admin/forecast-models', icon: Settings2, roles: ['ADMIN'] },
@@ -22,5 +26,5 @@ export const menuItems: MenuItem[] = [
   { label: 'Data Management', href: '/admin/data-management', icon: Database, roles: ['ADMIN'] },
 ];
 
-export const getMenuItems = (role: MenuRole = 'USER') => menuItems.filter((item) => item.roles.includes(role));
-export const USER_MENU = menuItems.filter((item) => item.roles.includes('USER'));
+export const menuItems: MenuItem[] = [...USER_MENU, ...ADMIN_MENU];
+export const getMenuItems = (role: MenuRole = 'USER') => role === 'ADMIN' ? menuItems : USER_MENU;

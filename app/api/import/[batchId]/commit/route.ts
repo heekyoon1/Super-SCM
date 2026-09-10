@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
-import { requireUser } from '@/lib/auth';
+import { requireAdminApi } from '@/lib/auth';
+import { apiErrorResponse } from '@/lib/api-auth';
 import { commitBatch } from '@/lib/import/repository';
 
-export async function POST(request: Request, { params }: { params: Promise<{ batchId: string }> }) { try { await requireUser(); const body = await request.json().catch(() => ({})) as { confirmReplace?: boolean }; return NextResponse.json(await commitBatch((await params).batchId, body.confirmReplace === true)); } catch (error) { return NextResponse.json({ error: error instanceof Error ? error.message : 'IMPORT_FAILED' }, { status: 400 }); } }
+export async function POST(request: Request, { params }: { params: Promise<{ batchId: string }> }) { try { await requireAdminApi(); const body = await request.json().catch(() => ({})) as { confirmReplace?: boolean }; return NextResponse.json(await commitBatch((await params).batchId, body.confirmReplace === true)); } catch (error) { return apiErrorResponse(error, 'IMPORT_FAILED'); } }
